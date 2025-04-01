@@ -19,6 +19,7 @@ import Course from "../models/Course.js";
             "svix-signature":req.headers["svix-signature"]
         })
         const {data, type} = req.body;
+        
         switch (type) {
             case 'user.created':{
                 const userData ={
@@ -65,12 +66,15 @@ import Course from "../models/Course.js";
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhooks = async(request, response)=>{
+   
     const sig = request.headers['stripe-signature'];
+  
 
     let event;
   
     try {
       event = Stripe.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      console.log(event)
     }
     catch (err) {
       response.status(400).send(`Webhook Error: ${err.message}`);
@@ -80,13 +84,17 @@ export const stripeWebhooks = async(request, response)=>{
     switch (event.type) {
       case 'payment_intent.succeeded':
 
-        { console.log(event.type)
+        { 
             const paymentIntent = event.data.object;
+          
          const paymentIntentid = paymentIntent.id;
+      
          const session = await stripeInstance.checkout.sessions.list({
             payment_intent:paymentIntentid,
          })
+        
          const {purchaseId} = session.data[0].metadata;
+     
          const purchaseData = await Purchase.findById(purchaseId);
          const userData = await user.findById(purchaseData.userId);
          const courseData = await Course.findById(purchaseData.courseId.toString());
@@ -104,6 +112,7 @@ export const stripeWebhooks = async(request, response)=>{
 
 
         break;}
+          
       case 'payment_intent.payment_failed':
        { const paymentIntent = event.data.object;
         const paymentIntentid = paymentIntent.id;
